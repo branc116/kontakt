@@ -1,0 +1,77 @@
+<form class="d-flex d-row justify-content-between" @onsubmit="@Add">
+    @foreach (var item in GetHeaders())
+    {
+        <input class="m-1 form-control" placeholder="@item" @bind="@(AddNewDict[item])" > 
+    }
+    <button class="m-1 btn btn-primary" type="submit">Dodaj</button>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+        @foreach (var item in GetHeaders())
+        {
+            <th>@item</th>
+        }
+        </tr>
+    </thead>
+    <tbody>
+        @if (objects != null) {
+            @foreach (var v in objects)
+            {
+                <tr>
+                @foreach (var item in GetValues(v))
+                {
+                    <td>@item</td>
+                }
+                <td><button class="btn btn-danger" @onclick="@(async () => await Dlt(v))">Delete</button></td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+<button @onclick="@Refresh">Refresh</button>
+@code {
+    [Parameter]
+    public ICruder Cruder { get; set; }
+    private List<object> objects = new List<object>();
+    private Dictionary<string, string> AddNewDict;
+    protected async override Task OnInitializedAsync()
+    {
+        AddNewDict = GetHeaders().ToDictionary(i => i, i => "");
+        objects = await Cruder.GetAll(0);
+    }
+    
+    public IEnumerable<System.Reflection.PropertyInfo> GetProps() {
+        return Cruder?.TypeInfo?.GetProperties()
+             ?? Enumerable.Empty<System.Reflection.PropertyInfo>();
+    }
+    public IEnumerable<string> GetHeaders() {
+        return GetProps().Select(i => i.Name);
+    }
+    public IEnumerable<IEnumerable<string>> GetValues() {
+        if (objects == null)
+            yield break;
+        foreach(var a in objects) {
+            yield return GetProps().Select(i => i.GetValue(a)?.ToString() ?? "");
+        }
+    }
+    public IEnumerable<string> GetValues(object obj) {
+        return GetProps().Select(i => i.GetValue(obj)?.ToString() ?? "");
+    }
+    public async Task Add() {
+        try {
+            await Cruder.Add(AddNewDict);
+        }catch (Exception ex){
+            Console.WriteLine("Lol");
+        }
+        objects = await Cruder.GetAll(0);
+    }
+    public async Task Dlt(object v) {
+        await Cruder.Delete(v);
+        objects = await Cruder.GetAll(0);
+    }
+    public async Task Refresh() {
+        objects = await Cruder.GetAll(0);
+    }
+}

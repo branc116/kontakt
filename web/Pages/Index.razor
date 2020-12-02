@@ -1,0 +1,109 @@
+﻿@page "/"
+@inject Task<swaggerClient> sc;
+<form @onsubmit=@(change) class="d-flex d-row justify-content-around">
+  <input class="m-5 form-control" placeholder="FirstName" @bind="@(input.FirstName)">
+  <input class="m-5 form-control" placeholder="LastName" @bind="@(input.LastName)">
+  <input class="m-5 form-control" placeholder="DateOfBirth (ISO format)" @bind="@(input.DateOfBirth)" type="datetime">
+  <button class="m-5 btn btn-primary" type="submit">Dodaj</button>
+</form>
+<div class="d-flex d-row justify-content-between" >
+  <button disabled="@(pageNum <= 0)" @onclick="@(() => cng(-1))">&lt;</button>
+  <label>@pageNum</label>
+  <button disabled="@gDisabled()" @onclick="@(() => cng(1))">&gt;</button>
+</div>
+<form @onsubmit="@(() => update())" @onreset="@(() => cancel())">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Name 2</th>
+        <th>Birth date</th>
+      </tr>
+    </thead>
+    <tbody>
+    @if (this.customers != null) { 
+      @foreach (var customer in this.customers)
+      {
+        if (customer == null)
+          continue;
+        if (customer.Id == selected) {
+          <tr>
+            <td><input class="my-2 form-control" placeholder="FirstName" @bind="@(edit.FirstName)"/></td>
+            <td><input class="my-2 form-control" placeholder="LastName" @bind="@(edit.LastName)"/></td>
+            <td><input class="my-2 form-control" placeholder="DateOfBirth" @bind="@(edit.DateOfBirth)"/></td>
+            <td><button class="my-2 btn btn-primary" type="submit">Ok</button></td>
+            <td><button class="my-2 btn btn-secondary" type="reset">X</button></td>
+            <td><button class="my-2 btn btn-danger" type="button" @onclick="@(() => dlt())">DLT</button></td>
+            <NavLink class="nav-link my-2" href="@GetLink(customer.Id)" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> INFO
+            </NavLink>
+          </tr>
+        } else {
+          <tr @onclick="@((e) => select(customer.Id))">
+            <td>@customer.FirstName</td>
+            <td>@customer.LastName</td>
+            <td>@customer.DateOfBirth</td>
+          </tr>
+        }
+      }
+    }
+    </tbody>
+  </table>
+</form>
+@code {
+  public System.Collections.Generic.ICollection<contacts.Customer> customers;
+  public contacts.Customer input = new contacts.Customer();
+  public Guid selected = default;
+  public contacts.Customer edit = default;
+  public int pageNum = 0;
+  string GetLink(Guid customerId) {
+    return $"/Customer/{customerId}";
+  }
+  bool gDisabled() {
+    return customers?.Count < 10;
+  }
+  async Task cng(int n) {
+    var client = await sc;
+    pageNum+=n;
+    customers = await client.ContactsAllAsync(pageNum);
+  }
+  protected override async Task OnInitializedAsync()
+  {
+    var client = await sc;
+    customers = await client.ContactsAllAsync(pageNum);
+  }
+  async Task change(object s) {
+    var client = await sc;
+    await client.ContactsAsync(input);
+    customers = await client.ContactsAllAsync(pageNum);
+  }
+  void select(Guid id) {
+    selected = id;
+    var c = customers.FirstOrDefault(i => i.Id == id);
+    edit = new contacts.Customer {
+      Id = c.Id,
+      FirstName = c.FirstName,
+      LastName = c.LastName,
+      DateOfBirth = c.DateOfBirth
+    };
+  }
+  void cancel() {
+    selected = default;
+    edit = null;
+  }
+  async Task update() {
+    var client = await sc;
+    await client.Contacts2Async(edit.Id, edit);
+    edit = default;
+    selected = default;
+    customers = await client.ContactsAllAsync(pageNum);
+  }
+  async Task dlt() {
+    var client = await sc;
+    await client.Contacts3Async(edit.Id);
+    edit = default;
+    selected = default;
+    customers = await client.ContactsAllAsync(pageNum);
+  }
+  
+}

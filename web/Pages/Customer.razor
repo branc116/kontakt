@@ -1,0 +1,32 @@
+@page "/Customer/{CustomerId}"
+@inject Task<swaggerClient> sc
+<div class="d-flex d-row justify-content-start">
+    <h1>@customer?.FirstName</h1>
+    <h2 class="ml-4">@customer?.LastName</h2>
+</div>
+<div class="d-flex d-row justify-content-between">
+    <div>
+        <h3>Adrese</h3>
+        <MyTable Cruder="@ac" />
+    </div>
+    <div>
+        <h3>Brojevi</h3>
+        <MyTable Cruder="@pnc" />
+    </div>
+</div>
+@code {
+    [Parameter]
+    public string CustomerId { get; set; }
+    public contacts.Customer customer { get; set; }
+    public swaggerClient client { get; set; }
+    public AddressCruder ac => new AddressCruder(client, Guid.Parse(CustomerId));
+    public PhoneNumberCruder pnc => new PhoneNumberCruder(client, Guid.Parse(CustomerId));
+    protected override async Task OnInitializedAsync()
+    {
+        client = await sc;
+        customer = await client.Contacts4Async(Guid.Parse(CustomerId));
+        //Adreses = await client.Address4Async(new Guid(CustomerId), 0);
+        //PhoneNumbers = await client.PhoneNumbers4Async(new Guid(CustomerId), 0);
+        @* await base.OnInitializedAsync(); *@
+    }
+}
